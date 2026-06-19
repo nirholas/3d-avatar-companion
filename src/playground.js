@@ -1155,3 +1155,16 @@ export function playgroundState() {
 	}
 	return { ...base, speed: Math.round(Math.hypot(c.vx, c.vy)), onLink: !!_instance._armHref };
 }
+
+// Console/debug convenience + the surface a few pages (e.g. the IBM demo)
+// drive directly. Set when this (lazy) module loads, in either host or
+// standalone use.
+if (typeof window !== 'undefined') {
+	window.__walkPlayground = {
+		launch: launchPlayground,
+		exit: exitPlayground,
+		switchMode: switchPlaygroundMode,
+		mode: getPlaygroundMode,
+		state: playgroundState,
+	};
+}
