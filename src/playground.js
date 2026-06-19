@@ -31,7 +31,14 @@ import {
 } from 'three';
 import { reserveWebGLContext, releaseWebGLContext } from './internal/budget.js';
 import { log } from './internal/log.js';
-import { ssGet, ssSet, ssDel, prefersReducedMotion, webglSupported, clamp } from './internal/storage.js';
+import {
+	ssGet,
+	ssSet,
+	ssDel,
+	prefersReducedMotion,
+	webglSupported,
+	clamp,
+} from './internal/storage.js';
 import { loadWalkAvatar } from './internal/load-avatar.js';
 import { resolveConfig, resolveAvatarEntry } from './config.js';
 
@@ -65,7 +72,20 @@ const FOOT_PAD = 26;
 const LAND_TOL = 14;
 const LINK_ARM_MS = 850;
 
-const SOLID_SELECTOR = ['a[href]', 'button', 'h1', 'h2', 'h3', 'h4', 'p', 'li', 'img', 'figure', '.card', '[data-platform]'].join(',');
+const SOLID_SELECTOR = [
+	'a[href]',
+	'button',
+	'h1',
+	'h2',
+	'h3',
+	'h4',
+	'p',
+	'li',
+	'img',
+	'figure',
+	'.card',
+	'[data-platform]',
+].join(',');
 
 function getMode() {
 	try {
@@ -282,7 +302,13 @@ class StrollPlayground {
 
 		const shadow = new Mesh(
 			new CircleGeometry(1, 28),
-			new MeshBasicMaterial({ color: 0x05070c, transparent: true, opacity: 0.32, side: DoubleSide, depthWrite: false }),
+			new MeshBasicMaterial({
+				color: 0x05070c,
+				transparent: true,
+				opacity: 0.32,
+				side: DoubleSide,
+				depthWrite: false,
+			}),
 		);
 		shadow.renderOrder = -1;
 		scene.add(shadow);
@@ -329,7 +355,11 @@ class StrollPlayground {
 			this.char.y = clamp(startScreen.y + sy, EDGE_PAD, docHeight() - EDGE_PAD);
 		} else {
 			this.char.x = clamp(w * 0.5, EDGE_PAD, w - EDGE_PAD);
-			this.char.y = clamp(sy + window.innerHeight * (dropIn ? 0.32 : 0.4), EDGE_PAD, docHeight() - EDGE_PAD);
+			this.char.y = clamp(
+				sy + window.innerHeight * (dropIn ? 0.32 : 0.4),
+				EDGE_PAD,
+				docHeight() - EDGE_PAD,
+			);
 		}
 		this.char.vx = 0;
 		this.char.vy = 0;
@@ -358,7 +388,8 @@ class StrollPlayground {
 		else if (k === 'ArrowRight' || k === 'd' || k === 'D') this.input.right = true;
 		else if (k === 'ArrowUp' || k === 'w' || k === 'W') this.input.up = true;
 		else if (k === 'ArrowDown' || k === 's' || k === 'S') this.input.down = true;
-		else if (k === ' ' || k === 'Spacebar' || k === 'Enter' || k === 'e' || k === 'E') this.input.dive = true;
+		else if (k === ' ' || k === 'Spacebar' || k === 'Enter' || k === 'e' || k === 'E')
+			this.input.dive = true;
 		else handled = false;
 		if (handled) e.preventDefault();
 	}
@@ -369,7 +400,8 @@ class StrollPlayground {
 		else if (k === 'ArrowRight' || k === 'd' || k === 'D') this.input.right = false;
 		else if (k === 'ArrowUp' || k === 'w' || k === 'W') this.input.up = false;
 		else if (k === 'ArrowDown' || k === 's' || k === 'S') this.input.down = false;
-		else if (k === ' ' || k === 'Spacebar' || k === 'Enter' || k === 'e' || k === 'E') this.input.dive = false;
+		else if (k === ' ' || k === 'Spacebar' || k === 'Enter' || k === 'e' || k === 'E')
+			this.input.dive = false;
 	}
 
 	_onResize() {
@@ -386,7 +418,12 @@ class StrollPlayground {
 	_hintFor(dropIn) {
 		const touch = matchMedia('(pointer: coarse)').matches;
 		const move = touch ? 'Use the d-pad to walk' : 'Arrow keys / WASD to walk anywhere';
-		this._say(dropIn ? `You're in! ${move}. Step on a link to dive deeper.` : `${move}. Step on a link to dive in.`, 5200);
+		this._say(
+			dropIn
+				? `You're in! ${move}. Step on a link to dive deeper.`
+				: `${move}. Step on a link to dive in.`,
+			5200,
+		);
 	}
 
 	_sayModeIntro() {
@@ -536,7 +573,8 @@ class StrollPlayground {
 			this.rig.rotation.y += dt * 10;
 			const s = Math.max(0.04, this.rig.scale.x - dt * 1.6);
 			this.rig.scale.setScalar(s);
-			if (this.shadow) this.shadow.material.opacity = Math.max(0, this.shadow.material.opacity - dt * 0.8);
+			if (this.shadow)
+				this.shadow.material.opacity = Math.max(0, this.shadow.material.opacity - dt * 0.8);
 		} else {
 			let d = this.char.facing - this._yaw;
 			while (d > Math.PI) d -= Math.PI * 2;
@@ -629,7 +667,10 @@ class PlatformerPlayground {
 		const host = document.createElement('div');
 		host.className = 'walk-pg walk-pg--plat';
 		host.setAttribute('role', 'application');
-		host.setAttribute('aria-label', 'Page playground — walk and jump the character with arrow keys');
+		host.setAttribute(
+			'aria-label',
+			'Page playground — walk and jump the character with arrow keys',
+		);
 		host.innerHTML = `
 			<canvas class="walk-pg-canvas"></canvas>
 			<div class="walk-pg-hint" aria-live="polite"></div>
@@ -694,7 +735,14 @@ class PlatformerPlayground {
 		sun.position.set(120, 260, 220);
 		scene.add(sun);
 
-		this.camera = new OrthographicCamera(0, window.innerWidth, 0, -window.innerHeight, -1000, 2000);
+		this.camera = new OrthographicCamera(
+			0,
+			window.innerWidth,
+			0,
+			-window.innerHeight,
+			-1000,
+			2000,
+		);
 		this.camera.position.z = 600;
 
 		const rig = new Group();
@@ -746,7 +794,8 @@ class PlatformerPlayground {
 			const bottom = r.bottom + sy;
 			if (bottom < bandTop || top > bandBottom) continue;
 			const style = el.ownerDocument.defaultView.getComputedStyle(el);
-			if (style.visibility === 'hidden' || style.display === 'none' || +style.opacity === 0) continue;
+			if (style.visibility === 'hidden' || style.display === 'none' || +style.opacity === 0)
+				continue;
 			const left = r.left + sx;
 			const right = r.right + sx;
 			const key = `${Math.round(left)},${Math.round(top)},${Math.round(right)}`;
@@ -768,7 +817,14 @@ class PlatformerPlayground {
 			out.push({ left, right, top, bottom, href, el });
 		}
 		const w = docWidth();
-		out.push({ left: -40, right: w + 40, top: docHeight() - 3, bottom: docHeight(), href: null, el: null });
+		out.push({
+			left: -40,
+			right: w + 40,
+			top: docHeight() - 3,
+			bottom: docHeight(),
+			href: null,
+			el: null,
+		});
 		this.platforms = out;
 		if (this.platform && !out.includes(this.platform)) out.push(this.platform);
 	}
@@ -799,7 +855,8 @@ class PlatformerPlayground {
 		let handled = true;
 		if (k === 'ArrowLeft' || k === 'a' || k === 'A') this.input.left = true;
 		else if (k === 'ArrowRight' || k === 'd' || k === 'D') this.input.right = true;
-		else if (k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W' || k === 'Spacebar') this.input.jump = true;
+		else if (k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W' || k === 'Spacebar')
+			this.input.jump = true;
 		else if (k === 'ArrowDown' || k === 's' || k === 'S') this.input.down = true;
 		else handled = false;
 		if (handled) e.preventDefault();
@@ -832,7 +889,12 @@ class PlatformerPlayground {
 	_hintFor(dropIn) {
 		const touch = matchMedia('(pointer: coarse)').matches;
 		const move = touch ? 'Use the buttons' : 'Arrow keys / WASD to move, Space to jump';
-		this._say(dropIn ? `You fell in! ${move}. Land on a link to dive deeper.` : `${move}. Land on a link to dive in.`, 5200);
+		this._say(
+			dropIn
+				? `You fell in! ${move}. Land on a link to dive deeper.`
+				: `${move}. Land on a link to dive in.`,
+			5200,
+		);
 	}
 
 	_sayModeIntro() {
@@ -1151,7 +1213,13 @@ export function playgroundState() {
 		diving: _instance._diving,
 	};
 	if (_instance.mode === 'platformer') {
-		return { ...base, grounded: c.grounded, facing: c.facing, platforms: _instance.platforms.length, onLink: !!_instance.platform?.href };
+		return {
+			...base,
+			grounded: c.grounded,
+			facing: c.facing,
+			platforms: _instance.platforms.length,
+			onLink: !!_instance.platform?.href,
+		};
 	}
 	return { ...base, speed: Math.round(Math.hypot(c.vx, c.vy)), onLink: !!_instance._armHref };
 }

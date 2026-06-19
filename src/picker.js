@@ -58,7 +58,13 @@ function ensureStyles() {
  */
 export function createAvatarPicker(opts) {
 	ensureStyles();
-	const { avatars = [], onSelect, anchor = { right: 16, bottom: 16 }, assetBase = '', docsUrl } = opts;
+	const {
+		avatars = [],
+		onSelect,
+		anchor = { right: 16, bottom: 16 },
+		assetBase = '',
+		docsUrl,
+	} = opts;
 	let currentId = opts.currentId || null;
 	let query = '';
 
@@ -95,7 +101,9 @@ export function createAvatarPicker(opts) {
 		btn.dataset.id = entry.id;
 		btn.title = entry.blurb || entry.name;
 		if (entry.accent) btn.style.setProperty('--wp-accent', entry.accent);
-		const orbStyle = entry.thumb ? ` style="background-image:url('${assetBase}${entry.thumb}')"` : '';
+		const orbStyle = entry.thumb
+			? ` style="background-image:url('${assetBase}${entry.thumb}')"`
+			: '';
 		btn.innerHTML = `
 			<span class="walk-picker-orb"${orbStyle}>${entry.thumb ? '' : entry.emoji || '🧍'}</span>
 			<span class="walk-picker-name">${entry.name}</span>

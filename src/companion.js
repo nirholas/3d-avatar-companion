@@ -24,7 +24,16 @@ import {
 } from 'three';
 import { reserveWebGLContext, releaseWebGLContext } from './internal/budget.js';
 import { log } from './internal/log.js';
-import { lsGet, lsSet, ssGet, ssSet, ssDel, prefersReducedMotion, webglSupported, clamp } from './internal/storage.js';
+import {
+	lsGet,
+	lsSet,
+	ssGet,
+	ssSet,
+	ssDel,
+	prefersReducedMotion,
+	webglSupported,
+	clamp,
+} from './internal/storage.js';
 import { loadWalkAvatar } from './internal/load-avatar.js';
 import { createAvatarPicker } from './picker.js';
 import { resolveConfig, resolveAvatarEntry } from './config.js';
@@ -42,7 +51,8 @@ function isExcludedRoute(config) {
 
 // ── Default page-context greeting (overridable via config.greeting) ───────────
 function defaultGreeting(path) {
-	if (path === '/pricing' || path === '/x-pricing') return 'Picking a plan? I can point you to the popular one.';
+	if (path === '/pricing' || path === '/x-pricing')
+		return 'Picking a plan? I can point you to the popular one.';
 	if (path === '/features') return 'Tap any feature card to see it in action.';
 	if (path.startsWith('/agent') || path.startsWith('/a/') || path.startsWith('/marketplace')) {
 		const name = pageSubjectName();
@@ -62,7 +72,9 @@ function pageSubjectName() {
 function contextTargetEl() {
 	const path = location.pathname.replace(/\/$/, '') || '/';
 	if (path === '/pricing' || path === '/x-pricing') {
-		return document.querySelector('[data-recommended], .pricing-card.is-featured, .plan.is-popular, .pricing-card--popular');
+		return document.querySelector(
+			'[data-recommended], .pricing-card.is-featured, .plan.is-popular, .pricing-card--popular',
+		);
 	}
 	if (path === '/features') return document.querySelector('.feature-card, [data-feature]');
 	return null;
@@ -205,7 +217,10 @@ class WalkCompanion {
 	}
 
 	_resolveEntry() {
-		const param = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('avatar') : null;
+		const param =
+			typeof location !== 'undefined'
+				? new URLSearchParams(location.search).get('avatar')
+				: null;
 		if (param) lsSet(this.config.keys.avatar, param);
 		const id = param || lsGet(this.config.keys.avatar) || this.config.defaultAvatarId;
 		return resolveAvatarEntry(id, this.config);
@@ -213,7 +228,11 @@ class WalkCompanion {
 
 	async _loadInto(entry) {
 		const fallback = resolveAvatarEntry(this.config.defaultAvatarId, this.config);
-		const { model, controller, entry: active } = await loadWalkAvatar(entry, {
+		const {
+			model,
+			controller,
+			entry: active,
+		} = await loadWalkAvatar(entry, {
 			assetBase: this.config.assetBase,
 			apiBase: this.config.apiBase,
 			manifestUrl: this.config.manifestUrl,
@@ -243,7 +262,8 @@ class WalkCompanion {
 
 	// ── Live avatar swap (from the picker) ────────────────────────────────────
 	async setAvatar(idOrEntry) {
-		const entry = typeof idOrEntry === 'string' ? resolveAvatarEntry(idOrEntry, this.config) : idOrEntry;
+		const entry =
+			typeof idOrEntry === 'string' ? resolveAvatarEntry(idOrEntry, this.config) : idOrEntry;
 		if (!entry) return;
 		lsSet(this.config.keys.avatar, entry.id);
 		this._picker?.setCurrent(entry.id);
@@ -251,7 +271,11 @@ class WalkCompanion {
 		this._say('Switching…');
 		try {
 			const fallback = resolveAvatarEntry(this.config.defaultAvatarId, this.config);
-			const { model, controller, entry: active } = await loadWalkAvatar(entry, {
+			const {
+				model,
+				controller,
+				entry: active,
+			} = await loadWalkAvatar(entry, {
 				assetBase: this.config.assetBase,
 				apiBase: this.config.apiBase,
 				manifestUrl: this.config.manifestUrl,
@@ -513,7 +537,9 @@ export function createWalkCompanion(opts = {}) {
 
 	function emitChange() {
 		try {
-			window.dispatchEvent(new CustomEvent('walk-companion:change', { detail: { enabled: isEnabled() } }));
+			window.dispatchEvent(
+				new CustomEvent('walk-companion:change', { detail: { enabled: isEnabled() } }),
+			);
 		} catch {
 			/* non-fatal */
 		}
@@ -588,7 +614,11 @@ export function createWalkCompanion(opts = {}) {
 				const mod = await import('./playground.js');
 				if (!mod.consumeDropIn(config)) return false;
 				control._wirePlaygroundReturn();
-				mod.launchPlayground({ avatarId: lsGet(config.keys.avatar) || null, dropIn: true, config });
+				mod.launchPlayground({
+					avatarId: lsGet(config.keys.avatar) || null,
+					dropIn: true,
+					config,
+				});
 				return true;
 			} catch (err) {
 				log.warn('drop-in failed:', err?.message || err);
@@ -609,7 +639,10 @@ export function createWalkCompanion(opts = {}) {
 				import('./playground.js')
 					.then((mod) => {
 						control._wirePlaygroundReturn();
-						mod.launchPlayground({ avatarId: lsGet(config.keys.avatar) || null, config });
+						mod.launchPlayground({
+							avatarId: lsGet(config.keys.avatar) || null,
+							config,
+						});
 					})
 					.catch((err) => {
 						log.warn('playground deep-link failed:', err?.message || err);

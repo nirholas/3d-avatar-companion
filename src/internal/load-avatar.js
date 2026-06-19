@@ -60,7 +60,10 @@ export async function loadWalkAvatar(entry, opts = {}) {
 		gltf = await loader.loadAsync(url);
 	} catch (err) {
 		if (fallbackEntry && fallbackEntry.id !== entry.id) {
-			log.warn(`avatar "${entry?.id}" failed to load — falling back to "${fallbackEntry.id}"`, err?.message || err);
+			log.warn(
+				`avatar "${entry?.id}" failed to load — falling back to "${fallbackEntry.id}"`,
+				err?.message || err,
+			);
 			active = fallbackEntry;
 			gltf = await loader.loadAsync(resolveAvatarUrl(fallbackEntry, { assetBase, apiBase }));
 		} else {
@@ -80,7 +83,9 @@ export async function loadWalkAvatar(entry, opts = {}) {
 			waveMs,
 		});
 	} else {
-		controller = makeEmbeddedController(model, gltf.animations || [], active.clips || {}, { waveMs });
+		controller = makeEmbeddedController(model, gltf.animations || [], active.clips || {}, {
+			waveMs,
+		});
 	}
 
 	return { model, controller, gltf, entry: active };

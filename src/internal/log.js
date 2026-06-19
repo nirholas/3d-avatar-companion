@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- this module IS the console wrapper */
 // Minimal namespaced logger. Quiet by default; set `window.__walkDebug = true`
 // (or localStorage `walk:debug` = '1') to surface info/debug lines. Warnings
 // and errors always pass through so failures are never swallowed silently.

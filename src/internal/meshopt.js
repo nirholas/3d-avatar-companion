@@ -10,8 +10,6 @@ let _promise = null;
 
 export function getMeshoptDecoder() {
 	if (_promise) return _promise;
-	_promise = import('three/addons/libs/meshopt_decoder.module.js').then(
-		(m) => m.MeshoptDecoder,
-	);
+	_promise = import('three/addons/libs/meshopt_decoder.module.js').then((m) => m.MeshoptDecoder);
 	return _promise;
 }
