@@ -40,6 +40,7 @@ import {
 	clamp,
 } from './internal/storage.js';
 import { loadWalkAvatar } from './internal/load-avatar.js';
+import { createAvatarPicker } from './picker.js';
 import { resolveConfig, resolveAvatarEntry } from './config.js';
 
 // Active config — set by launchPlayground. Defaults keep the module usable if a
@@ -136,6 +137,89 @@ function modeButtonHTML(mode) {
 	return `<button type="button" class="walk-pg-mode" aria-label="Switch movement mode (currently ${label})" title="Switch mode (M)"><span class="walk-pg-mode-ic" aria-hidden="true">${icon}</span><span class="walk-pg-mode-tx">${label}</span></button>`;
 }
 
+// The "choose avatar" button shown in the playground toolbar. Only rendered when
+// the picker is enabled; carries `data-walk-picker-toggle` so the picker's
+// outside-click dismiss ignores re-clicks on the button itself.
+function pickButtonHTML() {
+	return `<button type="button" class="walk-pg-pick" data-walk-picker-toggle aria-label="Choose your avatar" title="Choose avatar (C)"><span class="walk-pg-pick-ic" aria-hidden="true">🧑</span><span class="walk-pg-pick-tx">Avatar</span></button>`;
+}
+
+// Free a model's GPU resources (geometries, materials, textures) when it leaves
+// the rig after a live avatar swap. Mirrors the per-mesh disposal in teardown.
+function disposeModel(model) {
+	model.traverse((n) => {
+		if (!n.isMesh) return;
+		n.geometry?.dispose?.();
+		const mats = Array.isArray(n.material) ? n.material : [n.material];
+		mats.forEach((m) => {
+			if (!m) return;
+			for (const v of Object.values(m)) if (v && v.isTexture) v.dispose();
+			m.dispose?.();
+		});
+	});
+}
+
+// Open (or toggle) the avatar picker for a running playground. Lazily builds the
+// popover once, then reuses it. Selecting an avatar hot-swaps the live rig.
+function openAvatarPicker(pg) {
+	if (_config.enablePicker === false) return;
+	if (!pg._picker) {
+		pg._picker = createAvatarPicker({
+			avatars: _config.avatars,
+			currentId: pg._avatarId || _config.defaultAvatarId,
+			assetBase: _config.assetBase,
+			docsUrl: _config.docsUrl,
+			onSelect: (entry) => swapAvatar(pg, entry),
+		});
+	}
+	pg._picker.toggle();
+}
+
+// Reload the chosen avatar and swap it into the live rig without leaving the
+// playground. Persists the selection to the shared companion/playground key so
+// the choice carries across mode switches, the corner companion, and pages.
+async function swapAvatar(pg, idOrEntry) {
+	const entry =
+		typeof idOrEntry === 'string' ? resolveAvatarEntry(idOrEntry, _config) : idOrEntry;
+	if (!entry || !pg.mounted || !pg.rig) return;
+	if (entry.id === pg._avatarId) return;
+	pg._avatarId = entry.id;
+	try {
+		localStorage.setItem(_config.keys.avatar, entry.id);
+	} catch {
+		/* non-fatal — selection still applies for this session */
+	}
+	pg._picker?.setCurrent(entry.id);
+	pg._say?.('Switching…', 4000);
+	try {
+		const next = await loadCharacter(entry.id, pg._charPx);
+		if (!pg.mounted || !pg.rig) {
+			disposeModel(next.model);
+			next.controller?.dispose?.();
+			return;
+		}
+		if (pg.model) {
+			pg.rig.remove(pg.model);
+			disposeModel(pg.model);
+		}
+		pg.controller?.dispose?.();
+		pg.rig.add(next.model);
+		pg.model = next.model;
+		pg.controller = next.controller;
+		pg.modelHalfW = next.halfW;
+		if (typeof pg._shadowR === 'number') pg._shadowR = Math.max(22, next.halfW * 1.15);
+		pg._say?.(`Say hi to ${entry.name}!`);
+	} catch (err) {
+		log.warn('avatar swap failed:', err?.message || err);
+		pg._say?.('Couldn’t load that one — try another.');
+	}
+}
+
+function destroyPicker(pg) {
+	pg._picker?.destroy();
+	pg._picker = null;
+}
+
 // Load + scale the chosen avatar to a fixed pixel height, feet at the rig
 // origin. Goes through the shared unified loader so any roster avatar animates.
 async function loadCharacter(avatarId, charPx) {
@@ -183,6 +267,9 @@ class StrollPlayground {
 		this._spawnGuardUntil = 0;
 		this._v0 = new Vector3();
 		this._v1 = new Vector3();
+		this._picker = null;
+		this.model = null;
+		this._charPx = CHAR_PX;
 	}
 
 	async mount({ avatarId = null, startScreen = null, dropIn = false, switched = false } = {}) {
@@ -219,6 +306,7 @@ class StrollPlayground {
 		window.removeEventListener('keyup', this._onKeyUp, true);
 		window.removeEventListener('resize', this._onResize);
 		this._clearArm();
+		destroyPicker(this);
 		this._teardown();
 	}
 
@@ -235,6 +323,7 @@ class StrollPlayground {
 		host.innerHTML = `
 			<canvas class="walk-pg-canvas"></canvas>
 			<div class="walk-pg-hint" aria-live="polite"></div>
+			${_config.enablePicker === false ? '' : pickButtonHTML()}
 			${modeButtonHTML(this.mode)}
 			<button type="button" class="walk-pg-exit" aria-label="Exit playground" title="Exit (Esc)">Exit ✕</button>
 			<div class="walk-pg-pad" aria-hidden="true">
@@ -255,6 +344,10 @@ class StrollPlayground {
 		this.flashEl = host.querySelector('.walk-pg-flash');
 		host.querySelector('.walk-pg-exit').addEventListener('click', () => exitPlayground());
 		host.querySelector('.walk-pg-mode').addEventListener('click', () => switchPlaygroundMode());
+		host.querySelector('.walk-pg-pick')?.addEventListener('click', (e) => {
+			e.stopPropagation();
+			openAvatarPicker(this);
+		});
 		host.querySelectorAll('.walk-pg-btn').forEach((btn) => {
 			const act = btn.getAttribute('data-act');
 			const on = (e) => {
@@ -318,6 +411,7 @@ class StrollPlayground {
 		this.modelHalfW = halfW;
 		this._shadowR = Math.max(22, halfW * 1.15);
 		rig.add(model);
+		this.model = model;
 		this.controller = controller;
 	}
 
@@ -374,6 +468,8 @@ class StrollPlayground {
 
 	_onKeyDown(e) {
 		const k = e.key;
+		// While the picker is open it owns the keyboard (search, arrows, Escape).
+		if (this._picker?.isOpen()) return;
 		if (k === 'Escape') {
 			exitPlayground();
 			return;
@@ -381,6 +477,11 @@ class StrollPlayground {
 		if (k === 'm' || k === 'M') {
 			e.preventDefault();
 			switchPlaygroundMode();
+			return;
+		}
+		if (k === 'c' || k === 'C') {
+			e.preventDefault();
+			openAvatarPicker(this);
 			return;
 		}
 		let handled = true;
@@ -616,6 +717,9 @@ class PlatformerPlayground {
 		this._armAt = 0;
 		this._armHref = null;
 		this._diving = false;
+		this._picker = null;
+		this.model = null;
+		this._charPx = PLAT_CHAR_PX;
 	}
 
 	async mount({ avatarId = null, startScreen = null, dropIn = false, switched = false } = {}) {
@@ -655,6 +759,7 @@ class PlatformerPlayground {
 		window.removeEventListener('resize', this._onResize);
 		window.removeEventListener('scroll', this._scheduleRescan, true);
 		this._clearArm();
+		destroyPicker(this);
 		this._teardown();
 	}
 
@@ -674,6 +779,7 @@ class PlatformerPlayground {
 		host.innerHTML = `
 			<canvas class="walk-pg-canvas"></canvas>
 			<div class="walk-pg-hint" aria-live="polite"></div>
+			${_config.enablePicker === false ? '' : pickButtonHTML()}
 			${modeButtonHTML(this.mode)}
 			<button type="button" class="walk-pg-exit" aria-label="Exit playground" title="Exit (Esc)">Exit ✕</button>
 			<div class="walk-pg-pad" aria-hidden="true">
@@ -691,6 +797,10 @@ class PlatformerPlayground {
 		this.flashEl = host.querySelector('.walk-pg-flash');
 		host.querySelector('.walk-pg-exit').addEventListener('click', () => exitPlayground());
 		host.querySelector('.walk-pg-mode').addEventListener('click', () => switchPlaygroundMode());
+		host.querySelector('.walk-pg-pick')?.addEventListener('click', (e) => {
+			e.stopPropagation();
+			openAvatarPicker(this);
+		});
 		host.querySelectorAll('.walk-pg-btn').forEach((btn) => {
 			const act = btn.getAttribute('data-act');
 			const on = (e) => {
@@ -752,6 +862,7 @@ class PlatformerPlayground {
 		const { model, controller, halfW } = await loadCharacter(this._avatarId, PLAT_CHAR_PX);
 		this.modelHalfW = halfW;
 		rig.add(model);
+		this.model = model;
 		this.controller = controller;
 	}
 
@@ -843,6 +954,8 @@ class PlatformerPlayground {
 
 	_onKeyDown(e) {
 		const k = e.key;
+		// While the picker is open it owns the keyboard (search, arrows, Escape).
+		if (this._picker?.isOpen()) return;
 		if (k === 'Escape') {
 			exitPlayground();
 			return;
@@ -850,6 +963,11 @@ class PlatformerPlayground {
 		if (k === 'm' || k === 'M') {
 			e.preventDefault();
 			switchPlaygroundMode();
+			return;
+		}
+		if (k === 'c' || k === 'C') {
+			e.preventDefault();
+			openAvatarPicker(this);
 			return;
 		}
 		let handled = true;
@@ -1121,6 +1239,11 @@ function ensureStyles() {
 .walk-pg-mode:active{transform:scale(.96)}
 .walk-pg-mode:focus-visible{outline:2px solid #7aa2ff;outline-offset:2px}
 .walk-pg-mode-ic{font-size:14px;line-height:1}
+.walk-pg-pick{position:fixed;top:14px;right:192px;z-index:3;pointer-events:auto;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.16);background:rgba(14,16,22,.72);color:#f2f4f8;font:600 12.5px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;cursor:pointer;backdrop-filter:blur(6px);transition:background .2s ease,transform .15s ease}
+.walk-pg-pick:hover{background:rgba(122,162,255,.55)}
+.walk-pg-pick:active{transform:scale(.96)}
+.walk-pg-pick:focus-visible{outline:2px solid #7aa2ff;outline-offset:2px}
+.walk-pg-pick-ic{font-size:14px;line-height:1}
 .walk-pg-hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(8px);z-index:3;pointer-events:none;max-width:88vw;width:max-content;background:rgba(18,20,28,.92);color:#f2f4f8;font:500 13px/1.4 system-ui,sans-serif;padding:9px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);box-shadow:0 10px 28px rgba(0,0,0,.35);opacity:0;transition:opacity .3s ease,transform .3s ease;text-align:center}
 .walk-pg-hint.is-in{opacity:1;transform:translateX(-50%) translateY(0)}
 .walk-pg-btn{pointer-events:auto;border:1px solid rgba(255,255,255,.18);background:rgba(16,18,26,.78);color:#fff;display:grid;place-items:center;backdrop-filter:blur(6px);-webkit-user-select:none;user-select:none;touch-action:none}
@@ -1137,7 +1260,7 @@ function ensureStyles() {
 .walk-pg-portal{outline:2px solid rgba(122,162,255,.9)!important;outline-offset:3px;border-radius:6px;box-shadow:0 0 0 4px rgba(122,162,255,.18),0 0 28px rgba(122,162,255,.45)!important;transition:box-shadow .2s ease,transform .25s ease;animation:walk-pg-pulse 1.1s ease-in-out infinite}
 .walk-pg-portal.is-open{transform:scale(.94);box-shadow:0 0 0 6px rgba(122,162,255,.3),0 0 48px rgba(122,162,255,.7)!important}
 @keyframes walk-pg-pulse{0%,100%{box-shadow:0 0 0 4px rgba(122,162,255,.16),0 0 22px rgba(122,162,255,.35)}50%{box-shadow:0 0 0 6px rgba(122,162,255,.3),0 0 36px rgba(122,162,255,.6)}}
-@media (pointer: coarse){.walk-pg--stroll .walk-pg-pad,.walk-pg--plat .walk-pg-pad{display:flex}.walk-pg--stroll .walk-pg-hint{bottom:200px}.walk-pg--plat .walk-pg-hint{bottom:110px}.walk-pg-mode .walk-pg-mode-tx{display:none}.walk-pg-mode{right:84px}}
+@media (pointer: coarse){.walk-pg--stroll .walk-pg-pad,.walk-pg--plat .walk-pg-pad{display:flex}.walk-pg--stroll .walk-pg-hint{bottom:200px}.walk-pg--plat .walk-pg-hint{bottom:110px}.walk-pg-mode .walk-pg-mode-tx{display:none}.walk-pg-mode{right:84px}.walk-pg-pick .walk-pg-pick-tx{display:none}.walk-pg-pick{right:132px}}
 @media (prefers-reduced-motion:reduce){.walk-pg,.walk-pg-hint,.walk-pg-flash{transition:none}.walk-pg-portal{animation:none}}
 `;
 	document.head.appendChild(style);
