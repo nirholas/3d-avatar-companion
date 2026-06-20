@@ -140,8 +140,9 @@ control.instance                     // the live companion (or null)
 
 ```js
 import {
-  WALK_AVATARS, DEFAULT_AVATAR_ID, getAvatar, defaultAvatar,
-  listCategories, makeApiAvatarEntry, resolveAvatarUrl,
+  WALK_AVATARS, DEFAULT_AVATAR_ID, DEFAULT_SHARED_CLIPS,
+  getAvatar, defaultAvatar, listCategories,
+  makeApiAvatarEntry, resolveAvatarUrl,
 } from '@three-ws/walk';
 ```
 
@@ -150,7 +151,7 @@ import {
 ```js
 import {
   launchPlayground, exitPlayground, switchPlaygroundMode,
-  getPlaygroundMode, consumeDropIn, playgroundState,
+  getPlaygroundMode, shouldDropIn, consumeDropIn, playgroundState,
 } from '@three-ws/walk';
 ```
 
