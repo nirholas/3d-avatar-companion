@@ -103,6 +103,13 @@ class WalkCompanion {
 		this._cursorMovedAt = 0;
 		this._yaw = 0;
 		this._targetYaw = 0;
+		// Touch devices have no hovering cursor to follow, so the companion would
+		// sit frozen in idle. On a coarse pointer it wanders on its own instead —
+		// switched off the moment a real (fine) pointer moves it.
+		this._autonomous =
+			typeof matchMedia === 'function' ? !matchMedia('(pointer: fine)').matches : false;
+		this._autoWalking = false;
+		this._autoUntil = 0;
 		this._onPointerMove = this._onPointerMove.bind(this);
 		this._onLinkClick = this._onLinkClick.bind(this);
 		this._onVisibility = this._onVisibility.bind(this);
@@ -351,6 +358,9 @@ class WalkCompanion {
 	}
 
 	_onPointerMove(e) {
+		// A genuine fine pointer (mouse/trackpad/stylus) takes over cursor-follow;
+		// touch-drag (pointerType 'touch') leaves the autonomous wander in charge.
+		if (e.pointerType && e.pointerType !== 'touch') this._autonomous = false;
 		this._cursorX = e.clientX;
 		this._cursorMovedAt = performance.now();
 	}
@@ -401,7 +411,8 @@ class WalkCompanion {
 			ssSet(this.config.keys.invited, '1');
 			clearTimeout(this._inviteTimer);
 			this._inviteTimer = setTimeout(() => {
-				if (this.mounted) this._say('Click me to walk the whole page →');
+				if (this.mounted)
+					this._say(this._autonomous ? 'Tap me to walk the whole page →' : 'Click me to walk the whole page →');
 			}, 5600);
 		}
 	}
@@ -461,13 +472,26 @@ class WalkCompanion {
 		this.clock.update();
 		const dt = Math.min(this.clock.getDelta(), 0.05);
 
-		const movingRecently = performance.now() - this._cursorMovedAt < CURSOR_IDLE_MS;
-		if (!this._reduced && !this._orientLock) {
+		const now = performance.now();
+		const movingRecently = now - this._cursorMovedAt < CURSOR_IDLE_MS;
+		if (this._autonomous) {
+			if (!this._reduced && !this._orientLock && now >= this._autoUntil) {
+				this._autoWalking = !this._autoWalking;
+				if (this._autoWalking) {
+					// Stroll toward a fresh heading, then pause and face it.
+					this._targetYaw = clamp(Math.random() * 1.2 - 0.6, -0.6, 0.6);
+					this._autoUntil = now + 1800 + Math.random() * 2200;
+				} else {
+					this._autoUntil = now + 900 + Math.random() * 1600;
+				}
+			}
+		} else if (!this._reduced && !this._orientLock) {
 			const rel = (this._cursorX - window.innerWidth / 2) / (window.innerWidth / 2);
 			this._targetYaw = clamp(rel * 0.7, -0.7, 0.7);
 		}
 		const turning = Math.abs(this._targetYaw - this._yaw) > 0.04;
-		const shouldWalk = !this._reduced && (movingRecently || turning);
+		const walkCue = this._autonomous ? this._autoWalking : movingRecently;
+		const shouldWalk = !this._reduced && (walkCue || turning);
 		this.controller?.setState(shouldWalk ? 'walk' : 'idle');
 
 		this._yaw += (this._targetYaw - this._yaw) * 0.12;
@@ -517,6 +541,7 @@ function ensureStyles() {
 .walk-companion-bubble.is-in{opacity:1;transform:translateX(-50%) translateY(0)}
 .walk-companion-bubble::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:6px solid transparent;border-top-color:rgba(18,20,28,.94)}
 @media (max-width:520px){.walk-companion{width:148px;height:208px;right:10px;bottom:10px}.walk-companion-bubble{font-size:11.5px;max-width:170px}}
+@media (pointer:coarse){.walk-companion-close,.walk-companion-swap{opacity:1;width:26px;height:26px}.walk-companion-swap{right:32px}}
 @media (prefers-reduced-motion:reduce){.walk-companion,.walk-companion-bubble{transition:none}}
 `;
 	document.head.appendChild(style);
