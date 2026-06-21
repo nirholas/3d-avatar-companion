@@ -588,7 +588,7 @@ export function createWalkCompanion(opts = {}) {
 			emitChange();
 		},
 		toggle() {
-			if (isEnabled() && instance && instance.mounted) control.disable();
+			if (isEnabled()) control.disable();
 			else control.enable();
 		},
 		setAvatar(idOrEntry) {

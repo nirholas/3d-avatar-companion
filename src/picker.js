@@ -104,10 +104,11 @@ export function createAvatarPicker(opts) {
 		const orbStyle = entry.thumb
 			? ` style="background-image:url('${assetBase}${entry.thumb}')"`
 			: '';
-		btn.innerHTML = `
-			<span class="walk-picker-orb"${orbStyle}>${entry.thumb ? '' : entry.emoji || '🧍'}</span>
-			<span class="walk-picker-name">${entry.name}</span>
-		`;
+		btn.innerHTML = `<span class="walk-picker-orb"${orbStyle}>${entry.thumb ? '' : entry.emoji || '🧍'}</span>`;
+		const nameSpan = document.createElement('span');
+		nameSpan.className = 'walk-picker-name';
+		nameSpan.textContent = entry.name;
+		btn.appendChild(nameSpan);
 		btn.addEventListener('click', () => choose(entry));
 		return btn;
 	}

@@ -328,6 +328,7 @@ class StrollPlayground {
 			this._teardown();
 			return;
 		}
+		if (!this.mounted) { this._teardown(); return; }
 		this._placeStart(startScreen, dropIn);
 		this._spawnGuardUntil = performance.now() + SPAWN_GUARD_MS;
 		this._bindEvents();
@@ -786,6 +787,7 @@ class PlatformerPlayground {
 			this._teardown();
 			return;
 		}
+		if (!this.mounted) { this._teardown(); return; }
 		this._scrollY = window.scrollY || 0;
 		this._scan(true);
 		this._placeStart(startScreen, dropIn);
