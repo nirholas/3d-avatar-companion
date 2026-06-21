@@ -77,18 +77,40 @@ export async function loadWalkAvatar(entry, opts = {}) {
 	});
 
 	let controller;
-	if (active.rig === 'shared') {
-		controller = await buildSharedController(model, active.clips || DEFAULT_SHARED_CLIPS, {
-			manifestUrl,
-			waveMs,
-		});
-	} else {
-		controller = makeEmbeddedController(model, gltf.animations || [], active.clips || {}, {
-			waveMs,
-		});
+	try {
+		if (active.rig === 'shared') {
+			controller = await buildSharedController(model, active.clips || DEFAULT_SHARED_CLIPS, {
+				manifestUrl,
+				waveMs,
+			});
+		} else {
+			controller = makeEmbeddedController(model, gltf.animations || [], active.clips || {}, {
+				waveMs,
+			});
+		}
+	} catch (err) {
+		// Controller build failed after the GLB parsed — free the scene's GPU
+		// resources so a failed avatar load doesn't leak meshes/textures.
+		disposeModel(model);
+		throw err;
 	}
 
 	return { model, controller, gltf, entry: active };
+}
+
+// Release a parsed GLB scene's GPU resources (geometries, materials, textures)
+// when a load is abandoned mid-way so a failed avatar build leaks nothing.
+function disposeModel(model) {
+	model.traverse((n) => {
+		if (!n.isMesh) return;
+		n.geometry?.dispose?.();
+		const mats = Array.isArray(n.material) ? n.material : [n.material];
+		for (const m of mats) {
+			if (!m) continue;
+			for (const v of Object.values(m)) if (v && v.isTexture) v.dispose();
+			m.dispose?.();
+		}
+	});
 }
 
 // ── Embedded-clip controller (rig: 'embedded') ───────────────────────────────
@@ -193,25 +215,32 @@ async function buildSharedController(model, clips, { manifestUrl, waveMs }) {
 	const manager = new AnimationManager();
 	manager.attach(model);
 
-	const manifest = await fetch(manifestUrl, { cache: 'force-cache' }).then((r) => {
-		if (!r.ok) throw new Error(`HTTP ${r.status} fetching animation manifest`);
-		return r.json();
-	});
-	const available = new Set(manifest.map((d) => d.name));
-
-	// Resolve each requested clip to one that actually exists; unknown names fall
-	// back to idle so the controller never asks the manager for a missing clip.
 	const resolved = {};
-	for (const [state, name] of Object.entries({ ...DEFAULT_SHARED_CLIPS, ...clips })) {
-		resolved[state] = available.has(name) ? name : null;
-	}
-	resolved.idle = resolved.idle || (available.has('idle') ? 'idle' : null);
-	if (!resolved.idle) throw new Error('animation manifest missing an idle clip');
-	for (const k of Object.keys(resolved)) if (!resolved[k]) resolved[k] = resolved.idle;
+	try {
+		const manifest = await fetch(manifestUrl, { cache: 'force-cache' }).then((r) => {
+			if (!r.ok) throw new Error(`HTTP ${r.status} fetching animation manifest`);
+			return r.json();
+		});
+		const available = new Set(manifest.map((d) => d.name));
 
-	const wanted = new Set(Object.values(resolved));
-	manager.setAnimationDefs(manifest.filter((d) => wanted.has(d.name)));
-	await manager.loadAll();
+		// Resolve each requested clip to one that actually exists; unknown names fall
+		// back to idle so the controller never asks the manager for a missing clip.
+		for (const [state, name] of Object.entries({ ...DEFAULT_SHARED_CLIPS, ...clips })) {
+			resolved[state] = available.has(name) ? name : null;
+		}
+		resolved.idle = resolved.idle || (available.has('idle') ? 'idle' : null);
+		if (!resolved.idle) throw new Error('animation manifest missing an idle clip');
+		for (const k of Object.keys(resolved)) if (!resolved[k]) resolved[k] = resolved.idle;
+
+		const wanted = new Set(Object.values(resolved));
+		manager.setAnimationDefs(manifest.filter((d) => wanted.has(d.name)));
+		await manager.loadAll();
+	} catch (err) {
+		// The GLB loaded but the animation manifest/clips didn't — release the
+		// AnimationManager's mixer/retarget state instead of leaking it.
+		manager.dispose();
+		throw err;
+	}
 
 	let base = 'idle';
 	let waveTimer = null;
