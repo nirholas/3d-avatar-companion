@@ -23,6 +23,11 @@ import { resolveAvatarUrl, DEFAULT_SHARED_CLIPS } from '../roster.js';
 
 const DEFAULT_WAVE_MS = 1500;
 
+// Thrown by buildSharedController when the attached rig can't be driven by the
+// shared clip library (no skinned humanoid skeleton). loadWalkAvatar catches it
+// to recover to baked clips or the default rig — never a frozen T-pose.
+const RIG_UNSUPPORTED = 'WALK_RIG_UNSUPPORTED';
+
 let _loaderPromise = null;
 async function makeLoader() {
 	// One meshopt-only GLTFLoader, reused across loads. Draco/KTX2 are never
@@ -89,10 +94,39 @@ export async function loadWalkAvatar(entry, opts = {}) {
 			});
 		}
 	} catch (err) {
-		// Controller build failed after the GLB parsed — free the scene's GPU
-		// resources so a failed avatar load doesn't leak meshes/textures.
-		disposeModel(model);
-		throw err;
+		// A `shared` entry whose GLB turns out NOT to be a retargetable humanoid
+		// (no skinned mesh, too few canonical bones) can't be driven by the shared
+		// clip library — left alone it would freeze in its bind/T-pose, which the
+		// platform forbids. Recover without ever showing a T-pose:
+		//   1. play whatever clips are baked into the GLB itself, else
+		//   2. fall back to the default rig (the caller's fallbackEntry).
+		if (err?.code === RIG_UNSUPPORTED) {
+			if (gltf.animations && gltf.animations.length) {
+				log.warn(
+					`avatar "${active.id}" isn't a retargetable humanoid — driving its ${gltf.animations.length} baked clip(s) instead`,
+				);
+				// The shared `clips` map names manifest clips, not embedded ones, so
+				// drop it and let the embedded matcher use generic names + first-clip
+				// fallback (which never freezes).
+				controller = makeEmbeddedController(model, gltf.animations, {}, { waveMs });
+			} else if (fallbackEntry && fallbackEntry.id !== active.id) {
+				log.warn(
+					`avatar "${active.id}" can't be animated (non-humanoid rig, no baked clips) — falling back to "${fallbackEntry.id}"`,
+				);
+				disposeModel(model);
+				// Recurse once into the default rig; clear fallbackEntry so a broken
+				// default can't loop. The default (robot) is an embedded rig anyway.
+				return loadWalkAvatar(fallbackEntry, { ...opts, fallbackEntry: null });
+			} else {
+				disposeModel(model);
+				throw err;
+			}
+		} else {
+			// Controller build failed after the GLB parsed — free the scene's GPU
+			// resources so a failed avatar load doesn't leak meshes/textures.
+			disposeModel(model);
+			throw err;
+		}
 	}
 
 	return { model, controller, gltf, entry: active };
@@ -214,6 +248,19 @@ function makeEmbeddedController(root, clips, overrides, { waveMs }) {
 async function buildSharedController(model, clips, { manifestUrl, waveMs }) {
 	const manager = new AnimationManager();
 	manager.attach(model);
+
+	// attach() decides synchronously whether this rig is a retargetable humanoid
+	// (skinned mesh + enough canonically-named bones). If not, the library can't
+	// drive it — bail before fetching the manifest so loadWalkAvatar can recover
+	// to baked clips or the default rig instead of leaving a silent bind pose.
+	if (!manager.supportsCanonicalClips()) {
+		manager.dispose();
+		const err = new Error(
+			'walk: rig is not a retargetable humanoid (no skinned skeleton) — cannot drive shared clips',
+		);
+		err.code = RIG_UNSUPPORTED;
+		throw err;
+	}
 
 	const resolved = {};
 	try {

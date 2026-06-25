@@ -202,8 +202,15 @@ The companion honours these query params (via `bootstrap()`):
   steady idle and page "dives" skip the animation.
 - **Keyboard** — playground steers with arrow keys / WASD; the picker is fully
   keyboard‑navigable; every control has a visible focus ring.
-- **Zero footprint when off** — nothing loads (no Three.js fetch) until enabled,
-  and the playground code is a lazy `import()` paid for only on first detach.
+- **Lean & lazy** — `createWalkCompanion()` is side‑effect free: no DOM,
+  renderer, avatar, or animation work happens until you call `enable()` /
+  `bootstrap()`. The full‑page playground is instantiated only on the first
+  detach (loaded through a dynamic `import()`), so a page that only ever shows
+  the corner companion never runs playground code. On three.ws the playground is
+  additionally delivered as its own lazily‑fetched chunk.
+- **Never a T‑pose** — a `shared`‑rig avatar whose GLB turns out not to be a
+  retargetable humanoid (no skinned skeleton) falls back to its own baked clips,
+  then to the default rig — it never freezes in a bind/T‑pose.
 
 ---
 

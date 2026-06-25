@@ -54,6 +54,7 @@
 	],
 	"scripts": {
 		"build": "node build.mjs",
+		"test": "node --test test/*.test.mjs",
 		"prepublishOnly": "npm run build"
 	},
 	"peerDependencies": {
