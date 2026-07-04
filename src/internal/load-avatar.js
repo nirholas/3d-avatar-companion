@@ -18,6 +18,7 @@ import { AnimationMixer, LoopOnce, LoopRepeat } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { getMeshoptDecoder } from './meshopt.js';
 import { AnimationManager } from './runtime.js';
+import { resolveClipUrls } from './manifest.js';
 import { log } from './log.js';
 import { resolveAvatarUrl, DEFAULT_SHARED_CLIPS } from '../roster.js';
 
@@ -267,7 +268,7 @@ async function buildSharedController(model, clips, { manifestUrl, waveMs }) {
 		const manifest = await fetch(manifestUrl, { cache: 'force-cache' }).then((r) => {
 			if (!r.ok) throw new Error(`HTTP ${r.status} fetching animation manifest`);
 			return r.json();
-		});
+		}).then((defs) => resolveClipUrls(defs, manifestUrl));
 		const available = new Set(manifest.map((d) => d.name));
 
 		// Resolve each requested clip to one that actually exists; unknown names fall

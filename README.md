@@ -37,6 +37,12 @@ You also need to serve two sets of assets from your origin (or a CDN you point
 > The defaults match the three.ws asset layout. Override them with `assetBase`,
 > `apiBase`, and `manifestUrl`, or pass your own `avatars` roster.
 
+Don't want to host the assets? Point both at the three.ws CDN —
+`assetBase: 'https://three.ws'` and
+`manifestUrl: 'https://three.ws/animations/manifest.json'` (CORS is open).
+Relative clip URLs inside the manifest resolve against the **manifest's**
+origin, so a cross-origin manifest just works (v0.1.1+).
+
 ---
 
 ## Quick start
