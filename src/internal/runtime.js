@@ -9,9 +9,9 @@
 // (`build.mjs`, esbuild with `three` external) bundles it into a self-contained
 // `dist/`, so npm consumers get one standalone file with nothing to resolve.
 //
-// PROMOTION NOTE — when this package is split into its own external repo
-// (see the repo's STRUCTURE.md "Promotion path"), replace this single import
-// with a vendored copy of src/animation-manager.js and its two dependencies.
-// This file is the only seam that reaches back into the monorepo.
+// The engine is also published standalone as @three-ws/retarget
+// (packages/retarget) — same source, same seam pattern. If this package is
+// ever split into its own external repo, depend on @three-ws/retarget instead
+// of vendoring; this file is the only seam that reaches back into the monorepo.
 
 export { AnimationManager } from '../../../src/animation-manager.js';
