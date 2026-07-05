@@ -86,6 +86,29 @@ const SOLID_SELECTOR = [
 	'[data-platform]',
 ].join(',');
 
+let _cpStylesInjected = false;
+function ensureCheckpointStyles() {
+	if (_cpStylesInjected || typeof document === 'undefined') return;
+	_cpStylesInjected = true;
+	const style = document.createElement('style');
+	style.id = 'walk-cp-style';
+	style.textContent = `
+.walk-cp{position:fixed;z-index:2147483080;width:74px;height:74px;margin:-37px 0 0 -37px;pointer-events:none;display:grid;place-items:center;transition:opacity .3s ease}
+.walk-cp__ring{position:absolute;inset:0;border-radius:50%;border:2px dashed rgba(122,162,255,.5);background:radial-gradient(circle,rgba(122,162,255,.16),transparent 68%)}
+.walk-cp__num{position:relative;z-index:1;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:800 14px/1 system-ui,-apple-system,'Segoe UI',sans-serif;color:#fff;background:rgba(20,24,34,.85);border:1px solid rgba(122,162,255,.6);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.walk-cp.is-locked{opacity:.42}
+.walk-cp.is-active .walk-cp__ring{border-style:solid;border-color:rgba(110,231,183,.95);background:radial-gradient(circle,rgba(52,211,153,.3),transparent 66%);animation:walk-cp-pulse 1.4s ease-in-out infinite}
+.walk-cp.is-active .walk-cp__num{background:linear-gradient(135deg,#34d399,#6ee7b7);color:#06231a;border-color:transparent}
+.walk-cp.is-done .walk-cp__ring{border-style:solid;border-color:rgba(110,231,183,.5);background:none;animation:none}
+.walk-cp.is-done .walk-cp__num{background:#34d399;color:#06231a;border-color:transparent;font-size:0}
+.walk-cp.is-done .walk-cp__num::after{content:'✓';font-size:16px}
+@keyframes walk-cp-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.14);opacity:.55}}
+@media (prefers-reduced-motion:reduce){.walk-cp.is-active .walk-cp__ring{animation:none}}
+.walk-pg.is-quest .walk-pg-mode,.walk-pg.is-quest .walk-pg-pick,.walk-pg.is-quest .walk-pg-exit{display:none!important}
+`;
+	document.head.appendChild(style);
+}
+
 function getMode() {
 	try {
 		return localStorage.getItem(_config.keys.mode) === 'platformer' ? 'platformer' : 'stroll';
@@ -315,7 +338,15 @@ class StrollPlayground {
 		this._charPx = CHAR_PX;
 	}
 
-	async mount({ avatarId = null, startScreen = null, dropIn = false, switched = false } = {}) {
+	async mount({
+		avatarId = null,
+		startScreen = null,
+		dropIn = false,
+		switched = false,
+		checkpoints = null,
+		onReach = null,
+		onComplete = null,
+	} = {}) {
 		if (this.mounted) return;
 		if (!webglSupported()) {
 			log.warn('playground: WebGL unavailable');
@@ -323,6 +354,16 @@ class StrollPlayground {
 		}
 		this.mounted = true;
 		this._avatarId = avatarId;
+		// Optional "checkpoint" quest layer: the host supplies target elements the
+		// visitor must walk the character onto (a guided store tour, say). Purely
+		// additive — with no checkpoints the playground behaves exactly as before,
+		// so the homepage Stroll is untouched.
+		this._checkpoints = Array.isArray(checkpoints) && checkpoints.length ? checkpoints : null;
+		this._onReach = typeof onReach === 'function' ? onReach : null;
+		this._onComplete = typeof onComplete === 'function' ? onComplete : null;
+		this._activeCp = 0;
+		this._narrating = false;
+		this._cpMarkers = [];
 		this._buildDom();
 		try {
 			await this._buildScene();
@@ -333,12 +374,92 @@ class StrollPlayground {
 		}
 		if (!this.mounted) { this._teardown(); return; }
 		this._placeStart(startScreen, dropIn);
+		if (this._checkpoints) this._buildCheckpoints();
 		this._spawnGuardUntil = performance.now() + SPAWN_GUARD_MS;
 		this._bindEvents();
 		if (switched) this._sayModeIntro();
 		else this._hintFor(dropIn);
 		this.clock = new Timer();
 		this._raf = requestAnimationFrame(this._tick);
+	}
+
+	// ── Checkpoint quest (opt-in) ─────────────────────────────────────────────
+	// Freeze the character while the host narrates a reached checkpoint. Input is
+	// ignored and velocity bleeds off, so the avatar stands still until resumed.
+	setNarrating(on) {
+		this._narrating = !!on;
+	}
+
+	_buildCheckpoints() {
+		ensureCheckpointStyles();
+		this._cpMarkers = this._checkpoints.map((cp, i) => {
+			const el = document.createElement('div');
+			el.className = 'walk-cp is-locked';
+			el.innerHTML = `<span class="walk-cp__num">${i + 1}</span><span class="walk-cp__ring"></span>`;
+			el.setAttribute('aria-hidden', 'true');
+			document.body.appendChild(el);
+			return el;
+		});
+		this._syncCheckpointStates();
+		this._updateCheckpoints();
+	}
+
+	_syncCheckpointStates() {
+		this._cpMarkers.forEach((m, i) => {
+			const done = i < this._activeCp;
+			m.classList.toggle('is-done', done);
+			m.classList.toggle('is-active', i === this._activeCp && !done);
+			m.classList.toggle('is-locked', i > this._activeCp);
+		});
+	}
+
+	_updateCheckpoints() {
+		if (!this._cpMarkers?.length) return;
+		for (let i = 0; i < this._cpMarkers.length; i++) {
+			const target = this._checkpoints[i]?.el;
+			const marker = this._cpMarkers[i];
+			if (!target || !target.isConnected) {
+				marker.style.opacity = '0';
+				continue;
+			}
+			const r = target.getBoundingClientRect();
+			const cx = r.left + r.width / 2;
+			const cy = Math.min(window.innerHeight - 36, Math.max(36, r.bottom - 26));
+			marker.style.left = cx + 'px';
+			marker.style.top = cy + 'px';
+			marker.style.opacity = cy < -60 || cy > window.innerHeight + 60 ? '0' : '';
+		}
+	}
+
+	// When the character's feet reach the active checkpoint, freeze and hand off to
+	// the host's onReach(index, resume). The host narrates, then calls resume().
+	_probeCheckpoint() {
+		const i = this._activeCp;
+		const target = this._checkpoints[i]?.el;
+		if (!target || !target.isConnected) return;
+		const feetX = this.char.x - (window.scrollX || 0);
+		const feetY = this.char.y - (window.scrollY || 0);
+		const r = target.getBoundingClientRect();
+		const pad = 26;
+		if (feetX >= r.left - pad && feetX <= r.right + pad && feetY >= r.top - pad && feetY <= r.bottom + pad) {
+			this._narrating = true;
+			this.char.vx = 0;
+			this.char.vy = 0;
+			const resume = () => this._resumeCheckpoint();
+			if (this._onReach) this._onReach(i, resume);
+			else resume();
+		}
+	}
+
+	_resumeCheckpoint() {
+		this._activeCp++;
+		this._syncCheckpointStates();
+		if (this._activeCp >= this._checkpoints.length) {
+			this._narrating = false;
+			this._onComplete?.();
+		} else {
+			this._narrating = false;
+		}
 	}
 
 	unmount() {
@@ -354,6 +475,10 @@ class StrollPlayground {
 		document.removeEventListener('visibilitychange', this._onVisibility);
 		this._clearArm();
 		destroyPicker(this);
+		if (this._cpMarkers?.length) {
+			this._cpMarkers.forEach((m) => m.remove());
+			this._cpMarkers = [];
+		}
 		this._teardown();
 	}
 
@@ -375,6 +500,9 @@ class StrollPlayground {
 		ensureStyles();
 		const host = document.createElement('div');
 		host.className = 'walk-pg walk-pg--stroll';
+		// On a guided checkpoint quest, suppress the free-play chrome (mode switch,
+		// avatar picker, the playground's own exit) — the host owns those.
+		if (this._checkpoints) host.classList.add('is-quest');
 		host.setAttribute('role', 'application');
 		host.setAttribute('aria-label', 'Page playground — walk the character with the arrow keys');
 		host.innerHTML = `
@@ -638,6 +766,7 @@ class StrollPlayground {
 		if (!this._diving) this._step(dt);
 		this._follow();
 		this._render(dt);
+		if (this._checkpoints) this._updateCheckpoints();
 		this._raf = requestAnimationFrame(this._tick);
 	}
 
@@ -658,6 +787,12 @@ class StrollPlayground {
 		const c = this.char;
 		let ix = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
 		let iy = (this.input.down ? 1 : 0) - (this.input.up ? 1 : 0);
+		// Frozen while the host narrates a reached checkpoint: ignore steering so
+		// the character stands still (friction bleeds off any residual velocity).
+		if (this._narrating) {
+			ix = 0;
+			iy = 0;
+		}
 		if (ix !== 0 && iy !== 0) {
 			const inv = 1 / Math.SQRT2;
 			ix *= inv;
@@ -690,7 +825,10 @@ class StrollPlayground {
 		if (speed > 12) this.char.facing = Math.atan2(c.vx, c.vy);
 
 		const now = performance.now();
-		if (now - this._lastProbe > ELEM_PROBE_MS) {
+		// On a checkpoint quest the visitor is following a guided path, so the
+		// "walk onto a link → dive to another page" mechanic is suppressed — a
+		// stray step onto a product link must never navigate them away mid-tour.
+		if (!this._checkpoints && now - this._lastProbe > ELEM_PROBE_MS) {
 			this._lastProbe = now;
 			const feetX = c.x - (window.scrollX || 0);
 			const feetY = c.y - (window.scrollY || 0);
@@ -702,7 +840,7 @@ class StrollPlayground {
 		// Diving is opt-in: standing on a link only arms it (the glow + hint). You
 		// commit with a deliberate press — Space / Enter / E, the on-screen dive
 		// button, or a gamepad face button — never by lingering on it.
-		if (this._armHref && this.input.dive && now > this._spawnGuardUntil) {
+		if (!this._checkpoints && this._armHref && this.input.dive && now > this._spawnGuardUntil) {
 			this._dive(this._armHref);
 			return;
 		}
@@ -711,6 +849,10 @@ class StrollPlayground {
 		if (speed > RUN_SPEED) state = 'run';
 		else if (speed > 12) state = 'walk';
 		this.controller?.setState(state);
+
+		// Checkpoint quest: once the character is standing on the active checkpoint,
+		// freeze and hand off to the host to narrate it.
+		if (this._checkpoints && !this._narrating) this._probeCheckpoint();
 	}
 
 	_follow() {
@@ -833,6 +975,10 @@ class PlatformerPlayground {
 		document.removeEventListener('visibilitychange', this._onVisibility);
 		this._clearArm();
 		destroyPicker(this);
+		if (this._cpMarkers?.length) {
+			this._cpMarkers.forEach((m) => m.remove());
+			this._cpMarkers = [];
+		}
 		this._teardown();
 	}
 
