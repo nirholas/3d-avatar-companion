@@ -1,4 +1,4 @@
-# 3D Avatar Companion — a walking, talking Three.js avatar for your website
+# 3D Avatar Companion — a walking, talking 3D avatar for your website
 
 > A diverse, animated 3D avatar that **walks and talks over your web pages** — a corner web mascot plus a full‑page stroll/platformer playground, with a built‑in avatar picker. Powered by [Three.js](https://threejs.org). On npm as [`@three-ws/walk`](https://www.npmjs.com/package/@three-ws/walk).
 
