@@ -42,6 +42,25 @@ const CANVAS_W = 200;
 const CANVAS_H = 280;
 const CURSOR_IDLE_MS = 450; // cursor still longer than this → stop walking
 
+/**
+ * Resolve the avatar id for a bootstrap path that never mounts the corner
+ * companion (the `?walk=play` deep link and the playground drop-in resume).
+ *
+ * `WalkCompanion._resolveEntry()` gives `?avatar=` precedence over the stored
+ * choice and persists it; the playground paths bypass that method entirely, so
+ * without this helper `?walk=play&avatar=fox` silently loaded the stored (or
+ * default) avatar and the documented `?avatar=` control did nothing.
+ *
+ * @param {object} config resolved config (for its storage keys)
+ * @param {URLSearchParams} params the current query string
+ * @returns {string|null} the avatar id to launch with, or null for the default
+ */
+function deepLinkAvatarId(config, params) {
+	const param = params.get('avatar');
+	if (param) lsSet(config.keys.avatar, param);
+	return param || lsGet(config.keys.avatar) || null;
+}
+
 function isExcludedRoute(config) {
 	if (typeof window === 'undefined') return true;
 	if (window.top !== window.self) return true; // never inside an iframe/embed
@@ -644,13 +663,13 @@ export function createWalkCompanion(opts = {}) {
 			}
 		},
 
-		async _tryDropIn() {
+		async _tryDropIn(avatarId = null) {
 			try {
 				const mod = await import('./playground.js');
 				if (!mod.consumeDropIn(config)) return false;
 				control._wirePlaygroundReturn();
 				mod.launchPlayground({
-					avatarId: lsGet(config.keys.avatar) || null,
+					avatarId: avatarId || lsGet(config.keys.avatar) || null,
 					dropIn: true,
 					config,
 				});
@@ -668,23 +687,25 @@ export function createWalkCompanion(opts = {}) {
 			const params = new URLSearchParams(location.search);
 			const walk = params.get('walk');
 			if (walk === '0') {
+				// Turning the companion off must not record an avatar preference.
 				control.disable();
-			} else if (walk === 'play') {
+				return;
+			}
+			// `?avatar=` applies to every bootstrap path, not just the corner mount.
+			if (walk === 'play') {
+				const avatarId = deepLinkAvatarId(config, params);
 				lsSet(config.keys.enabled, '1');
 				import('./playground.js')
 					.then((mod) => {
 						control._wirePlaygroundReturn();
-						mod.launchPlayground({
-							avatarId: lsGet(config.keys.avatar) || null,
-							config,
-						});
+						mod.launchPlayground({ avatarId, config });
 					})
 					.catch((err) => {
 						log.warn('playground deep-link failed:', err?.message || err);
 						control.enable();
 					});
 			} else if (walk === '1' || isEnabled()) {
-				control._tryDropIn().then((dropped) => {
+				control._tryDropIn(deepLinkAvatarId(config, params)).then((dropped) => {
 					if (!dropped) control.enable();
 				});
 			}

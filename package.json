@@ -60,7 +60,7 @@
 		"@three-ws/retarget": "^0.1.0"
 	},
 	"peerDependencies": {
-		"three": ">=0.150.0"
+		"three": ">=0.150.0 <1.0.0"
 	},
 	"devDependencies": {
 		"esbuild": "^0.28.1",

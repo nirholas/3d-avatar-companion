@@ -6,8 +6,14 @@
 // except `three` — into dist/, so npm consumers install one standalone package
 // that only needs their own copy of Three.js (the peer dependency).
 //
-// Dynamic import('./playground.js') stays a separate chunk (code-splitting) so
-// pages that only use the corner companion never download the playground.
+// `splitting` is on, so companion.js's dynamic import('./playground.js')
+// resolves to its own chunk and the playground never RUNS on a page that only
+// shows the corner companion. The playground's code still lands in the shared
+// chunk rather than a deferred one, because src/index.js also re-exports the
+// playground API at the top level; that static edge makes esbuild hoist the
+// module out of the dynamic chunk. Deferring the download too would mean moving
+// those exports to a "./playground" subpath, a breaking change to the public
+// API documented in README.md, so it is deliberately not done here.
 
 import { build } from 'esbuild';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';

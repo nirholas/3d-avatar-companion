@@ -19,7 +19,9 @@
 //
 // `three` is a peer dependency — bring your own copy.
 
-export const VERSION = '0.1.0';
+// Kept in lockstep with package.json "version" by test/version.test.mjs, which
+// fails the build if the two ever drift again.
+export const VERSION = '0.1.2';
 
 // Companion (corner mascot) — the main entry point.
 export { createWalkCompanion } from './companion.js';
