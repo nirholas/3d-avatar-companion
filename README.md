@@ -225,3 +225,7 @@ The companion honours these query params (via `bootstrap()`):
 ## License
 
 All rights reserved. See [LICENSE](LICENSE).
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=nirholas/3d-avatar-companion&type=Date)](https://www.star-history.com/#nirholas/3d-avatar-companion&Date)
