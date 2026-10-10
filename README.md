@@ -1,5 +1,10 @@
 # 3D Avatar Companion — a walking, talking 3D avatar for your website
 
+<!-- three.ws:badges -->
+[![GitHub stars](https://img.shields.io/github/stars/nirholas/3d-avatar-companion?style=flat&logo=github)](https://github.com/nirholas/3d-avatar-companion/stargazers) [![Last commit](https://img.shields.io/github/last-commit/nirholas/3d-avatar-companion?style=flat)](https://github.com/nirholas/3d-avatar-companion/commits) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat)](https://github.com/nirholas/3d-avatar-companion/pulls) [![AI agent friendly](https://img.shields.io/badge/AI%20agents-AGENTS.md%20%2B%20llms.txt-6d5dfc?style=flat)](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/AGENTS.md)
+<!-- /three.ws:badges -->
+
+
 > A diverse, animated 3D avatar that **walks and talks over your web pages** — a corner web mascot plus a full‑page stroll/platformer playground, with a built‑in avatar picker. Powered by [Three.js](https://threejs.org). On npm as [`@three-ws/walk`](https://www.npmjs.com/package/@three-ws/walk).
 
 Drop a character onto any site. It idles in the corner, turns to follow the
@@ -229,3 +234,26 @@ All rights reserved. See [LICENSE](LICENSE).
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=nirholas/3d-avatar-companion&type=Date)](https://www.star-history.com/#nirholas/3d-avatar-companion&Date)
+
+<!-- three.ws:growth -->
+## Support the project
+
+If 3d-avatar-companion saves you time, **[star it on GitHub](https://github.com/nirholas/3d-avatar-companion)**. Stars are how other developers and AI agents find the repositories worth trusting, and they cost you one click.
+
+Know someone who would use it? [Post on X](https://twitter.com/intent/tweet?text=3d-avatar-companion%3A%20Animated%203D%20avatar%20that%20walks%20and%20talks%20over%20your%20website%3A%203D%20avatar%20mascot%20with%20stroll%20%26&url=https%3A%2F%2Fgithub.com%2Fnirholas%2F3d-avatar-companion) · [Share on Bluesky](https://bsky.app/intent/compose?text=3d-avatar-companion%3A%20Animated%203D%20avatar%20that%20walks%20and%20talks%20over%20your%20website%3A%203D%20avatar%20mascot%20with%20stroll%20%26%20https%3A%2F%2Fgithub.com%2Fnirholas%2F3d-avatar-companion) · [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fnirholas%2F3d-avatar-companion) · [Submit to Hacker News](https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fnirholas%2F3d-avatar-companion&t=3d-avatar-companion%3A%20Animated%203D%20avatar%20that%20walks%20and%20talks%20over%20your%20website%3A%203D%20avatar%20mascot%20with%20stroll%20%26) · [Share on Reddit](https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fnirholas%2F3d-avatar-companion&title=3d-avatar-companion%3A%20Animated%203D%20avatar%20that%20walks%20and%20talks%20over%20your%20website%3A%203D%20avatar%20mascot%20with%20stroll%20%26)
+
+## Built for AI agents too
+
+Coding agents and LLM tooling can read this repo directly: [AGENTS.md](./AGENTS.md), [llms.txt](./llms.txt), [llms-full.txt](./llms-full.txt). Point an agent at `https://github.com/nirholas/3d-avatar-companion` and it has the context it needs.
+
+## More from the same author
+
+- [All repositories by nirholas](https://github.com/nirholas/nirholas#readme): the full catalog, grouped by topic
+- [three.ws](https://three.ws): the platform for 3D AI agents with Solana wallets, a skill marketplace and x402 payments
+- Questions or ideas: [open an issue](https://github.com/nirholas/3d-avatar-companion/issues) or [start a discussion](https://github.com/nirholas/3d-avatar-companion/discussions)
+
+## Contributors
+
+[![Contributors](https://contrib.rocks/image?repo=nirholas/3d-avatar-companion)](https://github.com/nirholas/3d-avatar-companion/graphs/contributors)
+
+<!-- /three.ws:growth -->

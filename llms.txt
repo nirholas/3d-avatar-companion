@@ -1,0 +1,27 @@
+# 3d-avatar-companion
+
+> Animated 3D avatar that walks and talks over your website: 3D avatar mascot with stroll & platformer modes.
+
+3d-avatar-companion is an open-source repository by nirholas, part of the three.ws ecosystem.
+
+## Docs
+
+- [README](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/README.md): install, usage and reference
+- [Install](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/README.md#install)
+- [Quick start](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/README.md#quick-start)
+- [How avatars are animated](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/README.md#how-avatars-are-animated)
+- [API](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/README.md#api)
+- [URL controls](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/README.md#url-controls)
+- [Accessibility & performance](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/README.md#accessibility-performance)
+- [License](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/README.md#license)
+- [AGENTS.md](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/AGENTS.md): guidance for coding agents
+- [Full text for LLMs](https://github.com/nirholas/3d-avatar-companion/blob/HEAD/llms-full.txt): the README inlined
+
+## Project
+
+- [Source](https://github.com/nirholas/3d-avatar-companion)
+- [Issues](https://github.com/nirholas/3d-avatar-companion/issues)
+- [Discussions](https://github.com/nirholas/3d-avatar-companion/discussions)
+- [Homepage](https://nirholas.github.io/3d-avatar-companion/)
+- [three.ws](https://three.ws): the platform this is part of
+- [All repositories by nirholas](https://github.com/nirholas/nirholas#readme)

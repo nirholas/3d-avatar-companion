@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: "3d-avatar-companion"
+abstract: "Animated 3D avatar that walks and talks over your website: 3D avatar mascot with stroll & platformer modes."
+repository-code: "https://github.com/nirholas/3d-avatar-companion"
+url: "https://three.ws"
+authors:
+  - name: three.ws
+    website: "https://three.ws"
